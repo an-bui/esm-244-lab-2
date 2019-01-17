@@ -9,6 +9,65 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+#### 0. Attach packages.
+```{r packages, include = FALSE}
+library(tidyverse)
+library(janitor)
+library(MASS)
+library(ggrepel)
+library(RColorBrewer)
+library(factoextra)
+library(ggbiplot)
+library(shinythemes)
+```
+
+To override (set) a function manually throughout an entire workspace, assign the function name explicitly:
+```{r assign a function name manually}
+select <- dplyr::select
+```
+
+Alternatively, you could include `dplyr::select` everywhere to choose dplyr's `select`, and no other package's.
+
+#### 1. Ordinal logisic regression for political party affiliation by ethnicity, age, sex
+```{r political data, include = FALSE}
+# read in data
+pol_party <- read_csv("pol_party.csv") %>% 
+  # in janitor package, converts all column names to snake case
+  clean_names() %>% 
+  # select participant_id through read_carefully columns
+  select(participant_id:read_carefully)
+```
+
+How do age, ethnicity, and gender influence the liklihood of identifying somewhere on a political spectrum from very liberal to very conservative?
+
+```{r wrangling, include = FALSE}
+#### create a new data frame ####
+pol_df <- pol_party %>% 
+  select(birth_year, gender, ethnicity, political_party) %>% 
+  # filter to only include data with birth_year > 1900
+  filter(birth_year > 1900,
+         # take out NAs from political_party
+         political_party != "NA",
+         # only include political party less than or equal to 7
+         political_party <= 7) %>% 
+  # add new column for age
+  mutate(age = 2016 - birth_year)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

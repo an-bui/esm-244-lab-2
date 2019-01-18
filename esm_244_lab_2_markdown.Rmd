@@ -38,7 +38,9 @@ pol_party <- read_csv("pol_party.csv") %>%
   select(participant_id:read_carefully)
 ```
 
-How do age, ethnicity, and gender influence the liklihood of identifying somewhere on a political spectrum from very liberal to very conservative?
+How do age, ethnicity, and gender influence the liklihood of identifying somewhere on a political spectrum from very liberal to very conservative?  
+
+**Political party**: 1 = very liberal, 7 = very conservative
 
 ```{r wrangling, include = FALSE}
 #### create a new data frame ####
@@ -52,12 +54,67 @@ pol_df <- pol_party %>%
          political_party <= 7) %>% 
   # add new column for age
   mutate(age = 2016 - birth_year)
+
+# When doing OLR, make the dependent variable class ORDERED FACTOR
+
+#### make dependent variable an ordered factor ####
+# coerces political_party column to factor
+pol_df$political_party <- factor(pol_df$political_party, 
+                                 # make that factor ordered
+                                 ordered = TRUE,
+                                 # call the levels
+                                 levels = c("1", "2", "3", "4", "5", "6", "7"))
+# check your work with class(pol_df$political_party), should come out as an ordered factor
+
+#### update categorical predictor variables to factors ####
+pol_df$ethnicity <- factor(pol_df$ethnicity)
+pol_df$gender <- factor(pol_df$gender)
 ```
 
+```{r basic exploration, include = FALSE}
+#### ethnicity counts ####
+counts_eth <- pol_df %>% 
+  group_by(ethnicity, political_party) %>% 
+  # tells you counts of each poltical_party levels for each ethnicity
+  tally()
 
+# hey, no shit, outcomes are weighted by white responses because there are way more white people who responded
 
+#### gender counts ####
+counts_g <- pol_df %>% 
+  group_by(gender, political_party) %>% 
+  tally()
+```
 
+```{r exploratory graphs, echo = FALSE}
+#### histogram ####
+# name plot, use ggplot, name data, name x axis
+pol_hist <- ggplot(pol_df, aes(x = political_party)) +
+  # histogram, fill columns based on ethnicity
+  geom_histogram(aes(fill = ethnicity), stat = "count") +
+  # use brewer function
+  scale_fill_brewer(palette = "YlGnBu") +
+  # group by ethnicity, adjust scales for sample sizes
+  facet_wrap(~ethnicity, scales = "free")
+pol_hist
+# non normally distributed responses, duh
+```
 
+Just to be clear, n for these data is too small for groups.
+
+```{r ordinal logistic regression, include = FALSE}
+#### use polr() for OLR ####
+pol_model <- polr(political_party ~ age + gender + ethnicity, data = pol_df)
+summary(pol_model)
+exp(coef(pol_model))
+
+```
+
+Note: The coefficients are in log odds and are with respect to reference levels to factors (default was female and Asian).  
+In summary, you can look at coefficient values and interpret log odds. For example:  
+- As age increases, we would expect to see a slight increase in the likelihood that a person ranks themselves higher on the scale, but is negligible.  
+- As you consider male to female, all things held constant, they are likely to rank themselves higher on the liberal to conservative scale.  
+By exponentiating coefficients, you can get information on the increase in odds given variables.
 
 
 

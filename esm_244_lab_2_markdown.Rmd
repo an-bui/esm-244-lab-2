@@ -103,23 +103,80 @@ pol_hist
 Just to be clear, n for these data is too small for groups.
 
 ```{r ordinal logistic regression, include = FALSE}
-#### use polr() for OLR ####
 pol_model <- polr(political_party ~ age + gender + ethnicity, data = pol_df)
 summary(pol_model)
 exp(coef(pol_model))
-
 ```
 
 Note: The coefficients are in log odds and are with respect to reference levels to factors (default was female and Asian).  
 In summary, you can look at coefficient values and interpret log odds. For example:  
 - As age increases, we would expect to see a slight increase in the likelihood that a person ranks themselves higher on the scale, but is negligible.  
 - As you consider male to female, all things held constant, they are likely to rank themselves higher on the liberal to conservative scale.  
-By exponentiating coefficients, you can get information on the increase in odds given variables.
+By exponentiating coefficients, you can get information on the increase in odds given variables.   
 
+Once you decide on a model, you can make predictions using it.
+```{r predictive model, include = FALSE}
+# using coefficients from pol_model, use predict() to give the probability of what responses might be given each row in the data that went into the model
+predictions <- predict(pol_model, type = "probs")
 
+# put both of these into a data frame to better link probabilities with data
+df <- data.frame(pol_df, predictions)
+```
 
+#### 2. Principal components analysis using WorldBank environmental indicators
+Wrangling is in key.
+```{r read in WorldBank data, include = FALSE}
+wb_10 <- read_csv("wb_10.csv") %>% 
+  # exclude column X1
+  select(-X1) %>% 
+  # make country code a row name
+  column_to_rownames("code")
+```
 
+Use PCA to start looking at relationships between the different variables.
+```{r PCA, include = FALSE}
+#### do the PCA ####
+# use base function prcomp(), select the columns with continuous variables
+wb_pca <- prcomp(wb_10[3:8], 
+                 # scale your variables
+                 scale = TRUE)
+summary(wb_pca)
+# with first two PCs, you can explain 74% variance in data
 
+#### construct plot ####
+# make biplot
+wb_pca_plot <- ggbiplot(wb_pca, 
+                        # color groups based on region
+                        groups = wb_10$region) + 
+  # label points with row names
+  geom_text_repel(label = rownames(wb_10),
+                  size = 2,
+                  segment.size = 0.2) +
+  theme_bw()
+wb_pca_plot
+```
+- Access to electricity is strongly negatively correlated with air pollution.  
+- CO2, methane, and greenhouse gas emissions are strongly positively correlated.  
+- Columbia and Venezuela are pretty similar across multiple variables
+
+```{r PCA descriptor plots, include = FALSE}
+#### screeplot ####
+fviz_screeplot(wb_pca)
+
+#### contributions of variables to components ####
+fviz_contrib(wb_pca, choice = "var", axes = 1, top = 6)
+# axis 1 dominated by ghg, methane, and co2
+
+fviz_contrib(wb_pca, choice = "var", axes = 2, top = 6)
+# axis 2 dominated by agland, electricity, and air_poll
+
+#### correlations between variables ####
+fviz_pca_biplot(wb_pca,
+                # change color of variables based on how well represented the variable is to those PCs
+                col.var = "cos2",
+                label = "var",
+                repel = TRUE)
+```
 
 
 
